@@ -57,6 +57,14 @@ public class Server implements Runnable {
         }
     }
 
+    public String getUsersDetails() {
+        String detailsOutput = "";
+        for (Conn c : conns) {
+            detailsOutput = detailsOutput + c.username + " - Address: 127.0.0.1:" + c.port + "\n";
+        }
+        return detailsOutput;
+    }
+
     /**
      *  Shutdown the server
      */
@@ -83,10 +91,13 @@ public class Server implements Runnable {
         private BufferedReader input;
         private PrintWriter output;
 
-        private String username;
+        protected String username;
+        protected String port;
 
         public Conn(Socket client) {
             this.client = client;
+            this.username = "";
+            this.port = "";
         }
 
         @Override
@@ -94,30 +105,44 @@ public class Server implements Runnable {
             try {
                 output = new PrintWriter(client.getOutputStream(), true);
                 input = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                
                 helper = new InputValidator();
-                username = "";
-                System.out.println("Asking username...");
-                output.println("Enter your unique username: ");
                 
+                output.println("Enter your unique username:");
+                username = "";
                 while(!helper.isUsernameValid(username)) {
                     username = input.readLine().trim();
                     if (!helper.isUsernameValid(username)) {
                         output.println("Username cannot be blank!");
                     }
                 }
-                System.out.println(username + " Connected - SERVER INFO.");
+                this.username = username;
 
+                output.println("Enter the port you want to connect:");
+                port = "";
+                while(!helper.isPortValid(port)) {
+                    port = input.readLine().trim();
+                    if (!helper.isPortValid(port)) {
+                        output.println("Port must contain 4 digits!");
+                    }
+                }
+                this.port = port;
+                
+                // Informing new user 
+                System.out.println(username + " Connected - SERVER INFO.");
                 output.println("Hello! " + username);
                 sendToAll(username + " connected!");
 
                 String msg;
                 while ((msg = input.readLine()) != null) {
-                    System.out.println("hey");
                     if (msg.equals("/quit")) {
                         off();
                     }
-                    sendToAll(username + ": "+ msg);
+                    if (msg.equals("/details")) {
+                        String detailsOutput = getUsersDetails();
+                        output.println("Users connected to your group: \n" + detailsOutput); 
+                    } else {
+                        sendToAll(username + ": "+ msg);
+                    }
                 }
             } catch (IOException exception) {
                 exception.printStackTrace();
