@@ -10,10 +10,17 @@ import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+// Tests
+import org.junit.Test;
 
+
+/**
+ * Uses dependency injection pattern
+ */
 public class Server implements Runnable {
 
     private ArrayList<Conn> conns;
+    private ArrayList<User> users;
     private ExecutorService threads;
     private ServerSocket srv;
     private boolean running;
@@ -84,14 +91,19 @@ public class Server implements Runnable {
 
     }
 
+    protected ArrayList<Conn> getCurrentConns() {
+        return this.conns;
+    }
+
     public class Conn implements Runnable {
     
-        private InputValidator helper;
+        private InputValidator inputHelper;
         private Socket client;
         private BufferedReader input;
         private PrintWriter output;
 
         protected String username;
+        protected String usernameTemp;
         protected String port;
 
         public Conn(Socket client) {
@@ -105,44 +117,49 @@ public class Server implements Runnable {
             try {
                 output = new PrintWriter(client.getOutputStream(), true);
                 input = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                helper = new InputValidator();
+
+                // Initiate helper to avoid wrong inputs and ensure unique users
+                inputHelper = new InputValidator(getCurrentConns());
                 
                 output.println("Enter your unique username:");
-                username = "";
-                while(!helper.isUsernameValid(username)) {
-                    username = input.readLine().trim();
-                    if (!helper.isUsernameValid(username)) {
-                        output.println("Username cannot be blank!");
+
+                while(!inputHelper.isUsernameValid(usernameTemp)) {
+                    usernameTemp = input.readLine().trim();
+                    if (!inputHelper.isUsernameValid(usernameTemp)) {
+                        output.println(inputHelper.getErrorDetails());
                     }
                 }
-                this.username = username;
+                this.username = usernameTemp;
 
                 output.println("Enter the port you want to connect:");
                 port = "";
-                while(!helper.isPortValid(port)) {
+                while(!inputHelper.isPortValid(port)) {
                     port = input.readLine().trim();
-                    if (!helper.isPortValid(port)) {
+                    if (!inputHelper.isPortValid(port)) {
                         output.println("Port must contain 4 digits!");
                     }
                 }
                 this.port = port;
                 
                 // Informing new user 
-                System.out.println(username + " Connected - SERVER INFO.");
-                output.println("Hello! " + username);
+                System.out.println(this.username + " Connected - SERVER INFO.");
+                output.println("Hello! " + this.username);
                 sendToAll(username + " connected!");
 
                 String msg;
                 while ((msg = input.readLine()) != null) {
                     if (msg.equals("/quit")) {
+                        // TODO: remove connection....
+                        output.println("Goodbye!"); 
+                        sendToAll(this.username + " disconnected.");
                         off();
-                    }
-                    if (msg.equals("/details")) {
+                    } else if (msg.equals("/details")) {
                         String detailsOutput = getUsersDetails();
                         output.println("Users connected to your group: \n" + detailsOutput); 
                     } else {
                         sendToAll(username + ": "+ msg);
                     }
+                    
                 }
             } catch (IOException exception) {
                 exception.printStackTrace();
