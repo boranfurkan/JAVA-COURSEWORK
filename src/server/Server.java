@@ -10,9 +10,19 @@ import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+// Tests
+import org.junit.Test;
 
+import server.chat.Group;
+import server.chat.User;
+
+
+/**
+ * Uses dependency injection pattern
+ */
 public class Server implements Runnable {
 
+    private ArrayList<Group> groups;
     private ArrayList<Conn> conns;
     private ExecutorService threads;
     private ServerSocket srv;
@@ -20,6 +30,7 @@ public class Server implements Runnable {
 
     public Server() {
         conns = new ArrayList<>();
+        groups = new ArrayList<>();
         running = true;
     }
 
@@ -43,19 +54,6 @@ public class Server implements Runnable {
             exception.printStackTrace();
         }
     }
-    /**
-     * Broadcasts the parameter message to all users of the group
-     * 
-     * @param msg Message that will be broadcasted
-     */
-    public void sendToAll(String msg) {
-        for (Conn c : conns) {
-            if (c == null) {
-                continue;
-            }
-            c.send(msg);
-        }
-    }
 
     /**
      *  Shutdown the server
@@ -76,48 +74,100 @@ public class Server implements Runnable {
 
     }
 
+    protected ArrayList<Conn> getCurrentConns() {
+        return this.conns;
+    }
+
+    protected ArrayList<Group> getCurrentGroups() {
+        return this.groups;
+    }
+
+    protected void addNewGroup(Group group) {
+        this.groups.add(group);
+    }
+
     public class Conn implements Runnable {
     
-        private InputValidator helper;
+        private InputValidator inputHelper;
         private Socket client;
-        private BufferedReader input;
-        private PrintWriter output;
+        private Group group;
 
-        private String username;
+        protected String usernameTemp;
+        protected String port;
+
+        public BufferedReader input;
+        public PrintWriter output;
+        public String username;
+
 
         public Conn(Socket client) {
             this.client = client;
+            this.username = "";
+            this.port = "";
+            this.inputHelper = new InputValidator(getCurrentConns());
+            try {
+                this.output = new PrintWriter(client.getOutputStream(), true);
+                this.input = new BufferedReader(new InputStreamReader(client.getInputStream()));
+            } catch (IOException exception) {
+                exception.printStackTrace();
+            }
         }
 
         @Override
         public void run() {
             try {
-                output = new PrintWriter(client.getOutputStream(), true);
-                input = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                
-                helper = new InputValidator();
-                username = "";
-                System.out.println("Asking username...");
-                output.println("Enter your unique username: ");
-                
-                while(!helper.isUsernameValid(username)) {
-                    username = input.readLine().trim();
-                    if (!helper.isUsernameValid(username)) {
-                        output.println("Username cannot be blank!");
+                // Getting valid username
+                this.output.println("Enter your unique username:");
+                while(!this.inputHelper.isUsernameValid(usernameTemp)) {
+                    this.usernameTemp = this.input.readLine().trim();
+                    if (!this.inputHelper.isUsernameValid(this.usernameTemp)) {
+                        this.output.println(inputHelper.getErrorDetails());
                     }
                 }
-                System.out.println(username + " Connected - SERVER INFO.");
+                this.username = this.usernameTemp;
 
-                output.println("Hello! " + username);
-                sendToAll(username + " connected!");
-
-                String msg;
-                while ((msg = input.readLine()) != null) {
-                    System.out.println("hey");
-                    if (msg.equals("/quit")) {
-                        off();
+                // Getting valid port
+                this.output.println("Enter the port you want to connect:");
+                this.port = "";
+                while(!this.inputHelper.isPortValid(this.port)) {
+                    this.port = input.readLine().trim();
+                    if (!this.inputHelper.isPortValid(this.port)) {
+                        this.output.println("Port must contain 4 digits!");
                     }
-                    sendToAll(username + ": "+ msg);
+                }
+                
+                // Adding user to respective group
+                for (Group g : getCurrentGroups()) {
+                    if (g.port.equals(this.port)) {
+                        this.group = g;
+                    }
+                }
+
+                // If group did not exist
+                if (this.group == null) {
+                    Group g = new Group(this.port);
+                    addNewGroup(g);
+                    this.group = g;
+                }
+
+                // Informing new user
+                this.group.addUser(this);
+                this.group.sendToAll(this.username + " connected!");
+                
+                // Connection stays here now until it leaves
+                String msg;
+                while ((msg = this.input.readLine()) != null) {
+                    if (msg.equals("/quit")) {
+                        // TODO: remove connection....
+                        output.println("Goodbye!"); 
+                        this.group.removeUser(this.username);
+                        off();
+                    } else if (msg.equals("/details")) {
+                        String detailsOutput = this.group.getUsersDetails();
+                        output.println("Users connected to your group: \n" + detailsOutput); 
+                    } else {
+                        this.group.sendToAll(username + ": "+ msg);
+                    }
                 }
             } catch (IOException exception) {
                 exception.printStackTrace();
@@ -140,7 +190,6 @@ public class Server implements Runnable {
                 exception.printStackTrace();
             }
         }
-
     }
 
     public static void main(String[] args) {
