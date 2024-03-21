@@ -160,7 +160,7 @@ public class Server implements Runnable {
                     if (msg.equals("/quit")) {
                         // TODO: remove connection....
                         output.println("Goodbye!"); 
-                        this.group.sendToAll(this.username + " disconnected.");
+                        this.group.removeUser(this.username);
                         off();
                     } else if (msg.equals("/details")) {
                         String detailsOutput = this.group.getUsersDetails();
