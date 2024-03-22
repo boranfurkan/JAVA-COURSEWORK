@@ -19,6 +19,9 @@ import server.chat.User;
 
 /**
  * Uses dependency injection pattern
+ * 
+ * TODO: Remove connection when user goes out... (inputvaldiator has old this.conns?)
+ * TODO: Admin checks users every 20s (??? what is means)
  */
 public class Server implements Runnable {
 
@@ -78,6 +81,14 @@ public class Server implements Runnable {
         return this.conns;
     }
 
+    protected void removeConn(Conn connection) {
+        for (Conn c : this.conns) {
+            if (c == connection) {
+                this.conns.remove(connection);
+            }
+        }
+    }
+
     protected ArrayList<Group> getCurrentGroups() {
         return this.groups;
     }
@@ -116,6 +127,10 @@ public class Server implements Runnable {
         @Override
         public void run() {
             try {
+                if (this.client.isClosed()) {
+                    System.out.println("USERNAME TERMIANTEDDDD");
+                }
+
                 // Getting valid username
                 this.output.println("Enter your unique username:");
                 while(!this.inputHelper.isUsernameValid(usernameTemp)) {
@@ -158,17 +173,35 @@ public class Server implements Runnable {
                 String msg;
                 while ((msg = this.input.readLine()) != null) {
                     if (msg.equals("/quit")) {
-                        // TODO: remove connection....
                         output.println("Goodbye!"); 
+                        removeConn(this);
                         this.group.removeUser(this.username);
                         off();
                     } else if (msg.equals("/details")) {
-                        String detailsOutput = this.group.getUsersDetails();
-                        output.println("Users connected to your group: \n" + detailsOutput); 
-                    } else {
+
+                        // Getting details of group members
+                        output.println("Users connected to your group: \n" + this.group.getUsersDetails()); 
+                    } else if (msg.substring(0, Math.min(msg.length(), 4)).equals("/to ")) {
+
+                        // Private mesages
+                        String[] splitMsg = msg.trim().split("\\s+");
+                        boolean sent = this.group.sendPrivateMessage(splitMsg[2], this.username, splitMsg[1]);
+                        if (sent) {
+                            output.println("Message sent");
+                        } else {
+                            output.println("User not found. Plese check the users: \n" + this.group.getUsersDetails());
+                        }
+                    }
+                    else {
+                        // Broadcasting
                         this.group.sendToAll(username + ": "+ msg);
                     }
                 }
+
+                // Client socket suddenly disconnected
+                this.group.removeUser(this.username);
+                removeConn(this);
+                off();
             } catch (IOException exception) {
                 exception.printStackTrace();
                 off();

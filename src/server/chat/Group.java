@@ -92,5 +92,40 @@ public class Group {
             u.send(msg);
         }
     }
+
+    /**
+     * Sends private message between users, true if sent
+     * 
+     * @param msg
+     * @param fromUsername
+     * @param toUsername
+     */
+    public boolean sendPrivateMessage(String msg, String fromUsername, String toUsername) {
+        User receiver = findUserByUsername(toUsername);
+        if (receiver == null) {
+            return false;
+        } else {
+            receiver.send("(Private) " + fromUsername + ": " + msg);
+            return true;
+        }
+    }
+
+    /**
+     * Gives the user object by searching its username in the group list
+     * 
+     * @param username
+     * @return User || null
+     */
+    public User findUserByUsername(String username) {
+        for (User u : this.users) {
+            if (u == null) {
+                continue;
+            }
+            if (u.username.equals(username)) {
+                return u;
+            }
+        }
+        return null;
+    }
     
 }
