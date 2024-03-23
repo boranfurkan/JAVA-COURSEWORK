@@ -84,4 +84,8 @@ public class InputValidator {
         return this.errorDetails;
     }
 
+    public void updateConns(ArrayList<Conn> conns) {
+        this.conns = conns;
+    }
+
 }

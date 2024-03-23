@@ -14,7 +14,6 @@ import java.util.concurrent.Executors;
 import org.junit.Test;
 
 import server.chat.Group;
-import server.chat.User;
 
 
 /**
@@ -62,13 +61,13 @@ public class Server implements Runnable {
      *  Shutdown the server
      */
     public void off() {
-        running = false;
+        this.running = false;
         try {
-            threads.shutdown();
-            if (!srv.isClosed()) {
-                srv.close();
+            this.threads.shutdown();
+            if (!this.srv.isClosed()) {
+                this.srv.close();
             }
-            for (Conn c : conns) {
+            for (Conn c : this.conns) {
                 c.off();
             }
         } catch (IOException exception) {
@@ -82,17 +81,18 @@ public class Server implements Runnable {
     }
 
     protected void removeConn(Conn connection) {
-        for (Conn c : this.conns) {
-            if (c == connection) {
-                this.conns.remove(connection);
-            }
-        }
+        this.conns.remove(connection);
     }
 
     protected ArrayList<Group> getCurrentGroups() {
         return this.groups;
     }
 
+    /**
+     * Adds new group to list
+     * 
+     * @param group
+     */
     protected void addNewGroup(Group group) {
         this.groups.add(group);
     }
@@ -103,7 +103,6 @@ public class Server implements Runnable {
         private Socket client;
         private Group group;
 
-        protected String usernameTemp;
         protected String port;
 
         public BufferedReader input;
@@ -132,14 +131,15 @@ public class Server implements Runnable {
                 }
 
                 // Getting valid username
+                String usernameTemp = "";
                 this.output.println("Enter your unique username:");
                 while(!this.inputHelper.isUsernameValid(usernameTemp)) {
-                    this.usernameTemp = this.input.readLine().trim();
-                    if (!this.inputHelper.isUsernameValid(this.usernameTemp)) {
+                    usernameTemp = this.input.readLine().trim();
+                    if (!this.inputHelper.isUsernameValid(usernameTemp)) {
                         this.output.println(inputHelper.getErrorDetails());
                     }
                 }
-                this.username = this.usernameTemp;
+                this.username = usernameTemp;
 
                 // Getting valid port
                 this.output.println("Enter the port you want to connect:");
@@ -173,23 +173,24 @@ public class Server implements Runnable {
                 String msg;
                 while ((msg = this.input.readLine()) != null) {
                     if (msg.equals("/quit")) {
-                        output.println("Goodbye!"); 
+                        this.output.println("Goodbye!"); 
                         removeConn(this);
                         this.group.removeUser(this.username);
+                        this.inputHelper.updateConns(getCurrentConns());
                         off();
                     } else if (msg.equals("/details")) {
 
                         // Getting details of group members
-                        output.println("Users connected to your group: \n" + this.group.getUsersDetails()); 
+                        this.output.println("Users connected to your group: \n" + this.group.getUsersDetails()); 
                     } else if (msg.substring(0, Math.min(msg.length(), 4)).equals("/to ")) {
 
                         // Private mesages
                         String[] splitMsg = msg.trim().split("\\s+");
                         boolean sent = this.group.sendPrivateMessage(splitMsg[2], this.username, splitMsg[1]);
                         if (sent) {
-                            output.println("Message sent");
+                            this.output.println("Message sent");
                         } else {
-                            output.println("User not found. Plese check the users: \n" + this.group.getUsersDetails());
+                            this.output.println("User not found. Plese check the users: \n" + this.group.getUsersDetails());
                         }
                     }
                     else {
@@ -201,6 +202,7 @@ public class Server implements Runnable {
                 // Client socket suddenly disconnected
                 this.group.removeUser(this.username);
                 removeConn(this);
+                this.inputHelper.updateConns(getCurrentConns());
                 off();
             } catch (IOException exception) {
                 exception.printStackTrace();
@@ -209,15 +211,15 @@ public class Server implements Runnable {
         }
 
         public void send(String msg) {
-            output.println(msg);
+            this.output.println(msg);
         }
 
         public void off() {
             try {
-                input.close();
-                output.close();
-                if (!client.isClosed()) {
-                    client.close();
+                this.input.close();
+                this.output.close();
+                if (!this.client.isClosed()) {
+                    this.client.close();
                 }
             } catch (IOException exception) {
                 exception.printStackTrace();
