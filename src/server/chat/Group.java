@@ -171,9 +171,9 @@ public class Group {
      * @return
      */
     public void informMemberStatus() {
-        String info = "";
+        String info = "STATUS UPDATES: \n";
         for (User u : this.users) {
-            info = info + u.username + " is connected. \n";
+            info = info + u.username + " is online. \n";
         }
         this.admin.send(info);
     }
