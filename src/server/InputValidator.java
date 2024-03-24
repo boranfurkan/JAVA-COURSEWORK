@@ -20,9 +20,12 @@ public class InputValidator {
      * @return boolean
      * @throws IllegalArgumentException
      */
-    public boolean isUsernameValid(String username) {
+    public boolean isUsernameValid(String username, Boolean isTest) {
         try {
-            if (isUsernameNotBlank(username) && isUsernameUnique(username)) {
+            if (isTest && isUsernameNotBlank(username.trim())) {
+                // Testing can't check socket connection objects
+                return true;
+            } else if (isUsernameNotBlank(username) && isUsernameUnique(username)) {
                 return true;
             }
         } catch (IllegalArgumentException exception) {
@@ -55,7 +58,6 @@ public class InputValidator {
     private boolean isUsernameUnique(String username) {
         // Ensure it is unique
         for (Conn c : this.conns) {
-            System.out.println("checking username... " + username + " =? " + c.username);
             if (c.username.equals(username)) {
                 throw new IllegalArgumentException("Username already connected, please choose another one.");
             } 
@@ -80,10 +82,18 @@ public class InputValidator {
         return false;
     }
 
+    /**
+     * 
+     * @return Details of the validation error
+     */
     public String getErrorDetails() {
         return this.errorDetails;
     }
 
+    /**
+     * Update the client connections by setting the new received argument
+     * @param conns
+     */
     public void updateConns(ArrayList<Conn> conns) {
         this.conns = conns;
     }

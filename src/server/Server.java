@@ -17,10 +17,9 @@ import server.chat.Group;
 
 
 /**
- * Uses dependency injection pattern
+ * Uses dependency injection pattern to run a server
+ * that handles client connections into chat grops
  * 
- * TODO: Remove connection when user goes out... (inputvaldiator has old this.conns?)
- * TODO: Admin checks users every 20s (??? what is means)
  */
 public class Server implements Runnable {
 
@@ -76,14 +75,27 @@ public class Server implements Runnable {
 
     }
 
+    /**
+     * 
+    * @return list of all connections of the server
+     */
     protected ArrayList<Conn> getCurrentConns() {
         return this.conns;
     }
 
+    /**
+     * Remove a connection from list of all connections
+     * 
+     * @param connection
+     */
     protected void removeConn(Conn connection) {
         this.conns.remove(connection);
     }
 
+    /**
+     * 
+     * @return list of all groups of the server
+     */
     protected ArrayList<Group> getCurrentGroups() {
         return this.groups;
     }
@@ -132,10 +144,10 @@ public class Server implements Runnable {
 
                 // Getting valid username
                 String usernameTemp = "";
-                this.output.println("Enter your unique username:");
-                while(!this.inputHelper.isUsernameValid(usernameTemp)) {
+                this.output.println("Enter your unique ID:");
+                while(!this.inputHelper.isUsernameValid(usernameTemp, false)) {
                     usernameTemp = this.input.readLine().trim();
-                    if (!this.inputHelper.isUsernameValid(usernameTemp)) {
+                    if (!this.inputHelper.isUsernameValid(usernameTemp, false)) {
                         this.output.println(inputHelper.getErrorDetails());
                     }
                 }
@@ -203,17 +215,16 @@ public class Server implements Runnable {
                 this.group.removeUser(this.username);
                 removeConn(this);
                 this.inputHelper.updateConns(getCurrentConns());
-                off();
+                this.off();
             } catch (IOException exception) {
                 exception.printStackTrace();
-                off();
+                this.off();
             }
         }
 
-        public void send(String msg) {
-            this.output.println(msg);
-        }
-
+        /**
+         * Closes IO and client socker
+         */
         public void off() {
             try {
                 this.input.close();

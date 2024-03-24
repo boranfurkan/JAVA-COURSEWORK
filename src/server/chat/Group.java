@@ -168,7 +168,6 @@ public class Group {
     /**
      * Informs the admin about curent members connection
      * 
-     * @return
      */
     public void informMemberStatus() {
         String info = "STATUS UPDATES: \n";
