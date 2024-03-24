@@ -5,28 +5,36 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 public class Client implements Runnable {
 
     private Socket client;
     private BufferedReader input;
     private PrintWriter output;
+    private Inputs inputHandler;
+    private Thread thread;
     private boolean quit;
+
+    public Client(
+        Socket socket,
+        PrintWriter output,
+        BufferedReader input
+    ) {
+        this.client = socket;
+        this.output = output;
+        this.input = input;
+        this.inputHandler = new Inputs();
+        this.thread = new Thread(this.inputHandler);
+    }
 
     @Override
     public void run() {
         try {
-            client = new Socket("127.0.0.1", 3331);
-
-            output = new PrintWriter(client.getOutputStream(), true);
-            input = new BufferedReader(new InputStreamReader(client.getInputStream()));
-
-            Inputs inputHandler  = new Inputs();
-            Thread thread = new Thread(inputHandler);
-            thread.start();
+            this.thread.start();
 
             String inputMsg;
-            while ((inputMsg = input.readLine()) != null) {
+            while ((inputMsg = this.input.readLine()) != null) {
                 System.out.println(inputMsg);
             }
         } catch (IOException exception) {
@@ -71,7 +79,18 @@ public class Client implements Runnable {
     }
     
     public static void main(String[] args) {
-        Client client = new Client();
-        client.run();
+        try {
+            // Manufacturing and injecting dependencies
+            Socket socket = new Socket("127.0.0.1", 3331);
+            PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
+            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            
+            Client client = new Client(socket, output, input);
+            client.run();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

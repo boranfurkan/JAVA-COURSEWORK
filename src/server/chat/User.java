@@ -15,10 +15,18 @@ public class User {
         this.isAdmin = isAdmin;
     }
 
+    /**
+     * Displays the message parameters to this user
+     * 
+     * @param msg
+     */
     public void send(String msg) {
         this.conn.output.println(msg);
     }
 
+    /**
+     * User gains Admin attribute
+     */
     public void makeAdmin() {
         this.isAdmin = true;
     }
